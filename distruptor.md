@@ -85,3 +85,15 @@ mark：Disruptor通过顺序递增的序号来编号管理通过其进行交换�
    举个例子，我们从MySQL的BigLog文件中顺序读取数据，然后写入到ElasticSearch（搜索引擎）中。在这种场景下，BigLog要求一个文件一个生产者，那个是一个生产者。而写入到ElasticSearch，则严格要求顺序，否则会出现问题，所以通常意义上的多消费者线程无法解决该问题，如果通过加锁，则性能大打折扣
 
 3. 停车场景。当汽车进入停车场时(A)，系统首先会记录汽车信息(B)。同时也会发送消息到其他系统处理相关业务(C)，最后发送短信通知车主收费开始(D)。在这个结构下，每个消费者拥有各自独立的事件序号Sequence，消费者之间不存在共享竞态。SequenceBarrier1监听RingBuffer的序号cursor，消费者B与C通过SequenceBarrier1等待可消费事件。SequenceBarrier2除了监听cursor，同时也监听B与C的序号Sequence，从而将最小的序号返回给消费者D，由此实现了D依赖B与C的逻辑。
+
+
+
+### Disruptor在shenyu中的应用
+
+[Soul网关-Disrutpor使用 - sewell_画风 - 博客园 (cnblogs.com)](https://www.cnblogs.com/sewell/p/15212221.html)
+
+[apache-shenyu之Disruptor如何应用 - 简书 (jianshu.com)](https://www.jianshu.com/p/406d3272668e)
+soul中，Disruptor在客户机接入时用来同步数据的，用以进行网关服务器数据的更新操作
+
+[【战、面试官】java队列不行了？换成Disruptor吧！ - 知乎 (zhihu.com)](https://zhuanlan.zhihu.com/p/532482184)
+
