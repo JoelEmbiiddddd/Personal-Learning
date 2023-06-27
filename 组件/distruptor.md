@@ -32,6 +32,10 @@ Disruptor 是一个开源的高性能内存队列。Disruptor 提供的功能优
 
 
 
+### Disruptor
+
+
+
 ### Kafka 和 disruptor的区别是什么？
 
 - **Kafka**：分布式消息队列，一般用在系统或者服务之间的消息传递，还可以被用作流式处理平台。
