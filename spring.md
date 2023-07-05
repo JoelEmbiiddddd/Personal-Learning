@@ -30,6 +30,49 @@ Spring Boot 只是简化了配置，如果你需要构建 MVC 架构的 Web 程�
 
 
 
+### Spring Bean 生命周期
+
+Bean的生命周期有4个，
+
+1. 实例化一个bean对象。
+2. 属性复制：为 Bean 设置相关属性和依赖
+3. **初始化相关信息：**
+   - 调用Aware接口，**通过让bean 实现 Aware 接口，则能在 bean 中获得相应的 Spring 容器资源**
+     - beanName
+     - beanfactory
+   - `BeanPostProcessor`前置处理
+   - 对Bean的所有信息进行初始化
+   - `BeanPostProcessor`后置处理
+4. 销毁：
+   - 使用
+   - 当应用程序不需要后，就会进行销毁。
+     - *若实现 DisposableBean 接口，则执行 destory()方法*
+     - *若配置自定义的 detory-method 方法，则执行*
+
+
+
+### beanfactory 和 factorybean的区别
+
+BeanFactory是个Factory，是一个接口，也就是IOC容器或对象⼯⼚，FactoryBean是个Bean。在Spring中，所有的Bean都是由BeanFactory(也就是IOC容器)来进⾏管理的。但对FactoryBean⽽⾔，这个Bean不是简单的Bean，⽽是⼀个能⽣产或者修饰对象⽣成的⼯⼚Bean,它的实现与设计模式中的⼯⼚模式和修饰器模式类似
+
+- 他们两个都是个工厂，但FactoryBean本质上还是一个Bean，也归BeanFactory管理
+- BeanFactory是Spring容器的顶层接口，FactoryBean更类似于用户自定义的工厂接口。
+
+
+
+### Spring Bean的作用对象
+
+1. Singleton:IOC容器仅存在一个Bean实例
+2. **prototype**：每次调用都会返回一个新的实例
+3. **request：**每次HTTP请求都会创建一个新的Bean
+4. **session**：首次http请求创建一个实例，作用域是浏览器首次访问直至浏览器关闭。
+
+
+
+### 依赖注入是什么
+
+依赖注入是一种消除类之间依赖关系的设计模式。例如，A类要依赖B类，A类不再直接创建B类，而是把这种依赖关系配置在外部xml文件（或java config文件）中，然后由Spring容器根据配置信息创建、管理bean类。
+
 
 
 ## Spring IOC
@@ -42,6 +85,22 @@ IOC是一种设计思想，而不是具体的技术体现。IoC 的思想就是�
 
 1. 控制：对象创建、管理、实例化的权利
 2. 反转：控制权交给外部环境（Spring框架、IOC容器）
+
+
+
+### IOC和DI是什么关系
+
+控制反转是通过依赖注入实现的，其实它们是同一个概念的不同角度描述。通俗来说就是**IoC是设计思想，DI是实现方式**。
+
+
+
+### IOC初始化
+
+1. 初始化的人口在容器实现中的`refresh()`调用来完成。
+2. 通过 ResourceLoader 来完成资源文件位置的定位
+3. 通过 BeanDefinitionReader来完成定义信息的解析和 Bean 信息的注册,。
+4. 容器解析得到 BeanDefinition 以后，需要把它在 IOC 容器中注册，这由 IOC 实现 BeanDefinitionRegistry 接口来实现。
+5. 然后我们就可以通过 BeanFactory 和 ApplicationContext 来享受到 Spring IOC 的服务了。
 
 
 
@@ -119,7 +178,8 @@ Bean的生命周期主要包括：Bean定义，Bean初始化，Bean生存期，B
 3. 如果Bean实现了BeanNameAware接口（@Resource，@Qualifier），spring会将Bean的Id传入SetBeanName方法去执行。
 4. 如果Bean实现了BeanFactoryAware接口，spring会调用Bean的setBeanFactory方法将BeanFactory的ioc容器传入。
 5. 如果Bean实现的是ApplicationContextAware接口的话，Spring会调用Bean的setApplicationContext将Bean应用的上下文传入进来。
-6. 还一些其他的设定例如使用@PostContruct来定义Bean在初始化时执行的方法，或者使用@PreDestory来定义Ioc容器被销毁时执行的方法等。
+6. 如果在 `<bean>` 中指定了该 Bean 的作用范围为 scope="singleton"，则将该 Bean 放入 Spring IoC 的缓存池中，将触发 Spring 对该 Bean 的生命周期管理；如果在 `<bean>` 中指定了该 Bean 的作用范围为 scope="prototype"，则将该 Bean 交给调用者，调用者管理该 Bean 的生命周期，Spring 不再管理该 Bean。
+7. 还一些其他的设定例如使用@PostContruct来定义Bean在初始化时执行的方法，或者使用@PreDestory来定义Ioc容器被销毁时执行的方法等。
 
 
 
@@ -129,12 +189,37 @@ Spring AOP 就是基于动态代理的，AOP能够将那些与业务无关，却
 
 
 
+**AOP的本质也是为了解耦，它是一种设计思想； 在理解时也应该简化理解。**
+
 ### Spring AOP 和 AspectJ AOP有什么区别？
+
+AspectJ AOP是一个更强的AOP框架，是实际意义的**AOP标准**
 
 1. Spring AOP 属于运行时增强，而 AspectJ 是编译时增强。
 2. Spring AOP 基于代理(Proxying)，而 AspectJ 基于字节码操作(Bytecode Manipulation)。
 3. Spring AOP 已经集成了 AspectJ ，AspectJ 应该算的上是 Java 生态系统中最完整的 AOP 框架了。AspectJ 相比于 Spring AOP 功能更加强大，但是 Spring AOP 相对来说更简单
 4. 当切面太多的话，最好选择 AspectJ 。
+
+
+
+### 已经有了AspectJ AOP为什么还需要Spring AOP
+
+1. Spring AOP 是建立在 AspectJ AOP 之上的一种更轻量级的 AOP 实现。Spring AOP 提供了类似 AspectJ 的 AOP 功能，但是它采用了基于代理的方式，在运行时生成代理对象来实现增强，而不需要依赖 AspectJ 编译器或特定的字节码处理。这种方式更加灵活，并且可以与 Spring 框架无缝集成。
+2. Spring AOP 的优势在于它与 Spring 框架的紧密集成，能够方便地与其他 Spring 功能（如依赖注入、事务管理等）一起使用。它使用的是 JDK 代理和 CGLIB 代理，可以透明地对目标对象进行代理，而无需修改目标对象的代码。这样可以在不更改现有代码的情况下，对现有的类增加切面功能。
+3. 虽然 Spring AOP 功能相对有限，不能支持像 AspectJ 那样的复杂切点表达式和织入点，但对于大多数常见的 AOP 增强场景，它已经足够实用和方便。如果需要更强大和灵活的 AOP 功能，可以考虑直接使用 AspectJ。
+
+
+
+### AOP的实现原理
+
+AOP的实现主要分为两大类：
+
+1. 静态代理，是在编译期生成AOP代理类，也称为编译时增强。
+2. 动态代理，在运行时在内存中“临时”生成 AOP 动态代理类，因此也被称为运行时增强。
+
+
+
+
 
 
 
@@ -312,62 +397,4 @@ Spring AOP中的增强或通知中使用到了适配器模式，与之相关的�
 ### 装饰器模式
 
 装饰者模式可以动态地给对象添加一些额外的属性或行为。在JDK中，`InputStream`家族，`InputStream` 类下有 `FileInputStream` (读取文件)、`BufferedInputStream` (增加缓存,使读取文件速度大大提升)等子类都在不修改`InputStream` 代码的情况下扩展了它的功能。
-
-
-
-## SpringBoot 自动装配原理
-
-
-
-使用spring的时候，我们要开启某些spring的特性或者引入第三方依赖的时候，还需要用XML或Java进行显式配置。
-
-但是，Spring Boot 项目，我们只需要添加相关依赖，无需配置，通过启动下面的 `main` 方法即可
-
-这就是自动装配的原因。
-
-
-
-### 什么是自动装配
-
-在没有spring boot的情况下，如果我们需要引入第三方依赖，就需要手动配置。而springboot，我们只需要引入starter，然后通过少量注解和简单的配置就可以使用第三方提供的功能。
-
-
-
-也就是自动装配可以简单理解为：**通过注解或者一些简单的配置就能在 Spring Boot 的帮助下实现某块功能**。
-
-
-
-
-
-### SpringBoot如何实现自动装配
-
-
-
-**SpringBoot的核心注解：SpringBootApplication**
-
-`@SpringBootApplication`看作是 `@Configuration`、`@EnableAutoConfiguration`、`@ComponentScan` 注解的集合。根据 SpringBoot 官网，这三个注解的作用分别是：
-
-1. `@EnableAutoConfiguration: ` 启动SpringBoot的自动装配机制
-2. `@Configuration：`允许在上下文中注册额外的bean或导入其他配置类
-3. `@ComponetScan：` 扫描被`@Component` (`@Service`,`@Controller`)注解的 bean，注解默认会扫描启动类所在的包下所有的类 ，可以自定义不扫描某些 bean。
-
-
-
-**@EnableAutoConfiguration：实现自动装配的核心注解**
-
-自动装配核心功能的实现实际是通过 `AutoConfigurationImportSelector`类。那么这个类干了一件什么事情呢？这个类叫加载自动装配类
-
-`AutoConfigurationImportSelector` 类实现了 `ImportSelector`接口，也就实现了这个接口中的 `selectImports`方法，该方法主要用于**获取所有符合条件的类的全限定类名，这些类需要被加载到 IoC 容器中**。具体流程如下：
-
-1. 判断自动装配开关是否打开，默认是开启的。
-2. 获取@EnableAutoConfiguration注解中的exclude(指定要排除的自动配置类)和exludeName（指定要排除的自动配置类的 全限定类名 ）
-3. 获取需要自动装配的所有配置类，读取`META-INF/spring.factories` 。注意，此处的spring.factories不是每次启动都全部加载的，而是满足要求才会加载，有一些条件注解。
-
-
-
-[6db825b79af04cf1b56b4e677fdb6e42.png (2245×1587) (csdnimg.cn)](https://img-blog.csdnimg.cn/6db825b79af04cf1b56b4e677fdb6e42.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBA6J-R6J6C5oG26Zy45LmLamF2YeaBtumcuA==,size_20,color_FFFFFF,t_70,g_se,x_16#pic_center)
-
-**总结：**
-
-![img](https://img-blog.csdnimg.cn/6db825b79af04cf1b56b4e677fdb6e42.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBA6J-R6J6C5oG26Zy45LmLamF2YeaBtumcuA==,size_20,color_FFFFFF,t_70,g_se,x_16#pic_center)
 

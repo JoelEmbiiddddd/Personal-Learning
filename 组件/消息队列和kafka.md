@@ -1,3 +1,5 @@
+[Kafka 连环20问 (qq.com)](https://mp.weixin.qq.com/s/DM3z8aM0CqAzWGwXEIzBhQ)
+
 ### 消息队列的作用是什么？
 
 1. 通过异步处理提高系统性能。
@@ -9,6 +11,21 @@
 ### AMQP是什么？
 
 是一种提供统一消息服务的应用层标准的消息队列协议。基于此协议的客户端与消息中间件可传递消息，并不受客户端/中间件同产品，不同的开发语言等条件的限制
+
+
+
+### 什么是死信队列？
+
+死信可以看作消费者不能处理收到的消息，也可以看作消费者不想处理收到的消息，还可以看作不符合处理要求的消息。
+
+- 消息内包含的消息内容无法被消费者解析，**为了确保消息的可靠性而不被随意丢弃**
+- **超过既定的重试次数**之后将消息投入死信队列
+
+
+
+### Kafka中如何实现死信队列
+
+重试越多次重新投递的时间就越久，并且需要设置一个上限，超过投递次数就进入死信队列
 
 
 
@@ -24,7 +41,7 @@
 ### 和其他的消息队列相对，kafka的优势在哪？
 
 1. **极致的性能：**基于 Scala 和 Java 语言开发，设计中大量使用了批量处理和异步的思想，最高可以每秒处理千万级别的消息。
-2. **生态系统兼容性好：**
+2. **生态系统兼容性好：** 客户端语言丰富：支持Java、.Net、PHP、Ruby、Python、Go等多种语言；
 
 
 
@@ -42,9 +59,45 @@
 
 1. 生产者
 2. 消费者
-3. 代理：可以看作是一个独立的kafka的实例。每个broker又包含有2个重要的概念
+3. 代理（Broker）：可以看作是一个独立的kafka的实例。每个broker又包含有2个重要的概念
    - Topic：Producer发布主题，consumer订阅主题。
    - Partition：对应于消息队列中的队列。 一个Topic可以有多个Partition，一个Topic有多个broker。
+4. Controller：Broker的领导者，每个Kafka集群任意时刻都只能有一个Controller。
+   - 每个Broker上的分区副本信息。
+   - 每个分区的Leader副本信息。
+
+
+
+### Kafka的零拷贝
+
+1. Kafka 把所有的消息都存放在单独的文件里，在消息投递时直接通过 `Sendfile` 方法发送文件，减少了上下文切换，因此大大提高了性能。
+
+2. Producer生产的数据持久化到broker，采用mmap文件映射，实现顺序的快速写入。
+
+   Customer从broker读取数据，采用sendfile，将磁盘文件读到OS内核缓冲区后，直接转到socket buffer进行网络发送。
+
+
+
+### Kafka高性能
+
+1. **顺序读写：**顺序读写不需要硬盘磁头的寻道时间，只需很少的扇区旋转时间，所以速度远快于随机读写
+2. **零拷贝：** 分别用了sendfile和mmap。
+3. **批量发送读取：**它在消息投递时会将消息缓存起来，然后批量发送。消费端在消费消息时，也不是一条一条处理的，而是批量进行拉取，提高了消息的处理速度。
+4. **数据压缩：**Kafka还支持对消息集合进行压缩，`Producer`可以通过`GZIP`或`Snappy`格式对消息集合进行压缩压缩的好处就是减少传输的数据量，减轻对网络传输的压力。
+5. **分区机制：** kafka中的topic中的内容可以被分为多partition存在，每个partition又分为多个段segment，所以每次操作都是针对一小部分做操作，很轻便，并且增加`并行操作`的能力
+
+
+
+### kafka的高可用性
+
+1. **备份机制：**Kafka会尽量将所有的Partition以及各Partition的副本均匀地分配到整个集群的各个Broker上。
+2. **ISR机制：** ISR中所有副本都跟上了Leader，通常只有ISR里的成员才可能被选为Leader。
+3. **ACK机制：**producer的消息发送确认机制，ack=0，ack=1，ack=all，其中ack=all的可用性是最高的。
+4. **故障恢复机制：**首先需要在集群所有Broker中选出一个Controller，负责各Partition的Leader选举以及Replica的重新分配。当出现Leader故障后，Controller会将Leader/Follower的变动通知到需为此作出响应的Broker。
+
+
+
+
 
 
 
@@ -124,5 +177,38 @@ kafka对于这个问题有3个参数
 
 
 
-###  kafka的主从机制描述下
+### Kafka的副本机制
 
+在Kafka中，**追随者副本是不对外提供服务的。**这就是说，任何一个追随者副本都不能响应消费者和生产者的读写请求。所有的请求都必须由领导者副本来处理，或者说，所有的读写请求都必须发往领导者副本所在的Broker，由该Broker负责处理。
+
+追随者副本不处理客户端请求，它唯一的任务就是从领导者副本**「异步拉取」**消息，并写入到自己的提交日志中，从而实现与领导者副本的同步。
+
+当领导者副本挂掉了，或者说领导者副本所在的Broker宕机时，Kafka依托于ZooKeeper提供的监控功能能够实时感知到，并立即开启新一轮的领导者选举，从追随者副本中选一个作为新的领导者。老Leader副本重启回来后，只能作为追随者副本加入到集群中。
+
+这样子的好处:
+
+1. **方便实现单调读**
+
+
+
+
+
+###  kafka的主从机制描述下（ISR机制）
+
+- **ISR(In-Sync Replication):** 一个 Partition 的中所有能够正常通信的 Partitions组成 ISR
+- **OSR：** 一个Partition中的所有不能够正常通信的Partitions组成的OSR。
+- AR(Assigned Replication): 所有 partition的合集称为 AR。ISR 是 AR 的一个子集。
+
+
+
+Leader维护ISR列表，Follower从leader同步数据有一定些延迟，超过阈值，这个Follower就会被踢出ISR，加入OSR列表中。此外新加入的Follower也会先加入到OSR中。倘若该副本后面慢慢地追上了Leader的进度，那么它是能够重新被加回ISR的。
+
+每个relica（leader和follower）都有HW，leader和follower各自负责更新自己的HW的状态。**对于leader新写入的消息，只有等所有ISR中的Follower都同步后，才能被消费者给消费。**这样就保证了如果 leader 所在的 broker 失效，该消息仍然可以从新选举的 leader 中获取。对于来自内部 broker 的读取请求，没有 HW 的限制。
+
+由此可得：Kafka 的复制机制既不是完全的同步复制，也不是单纯的异步复制
+
+
+
+### Leader选举策略
+
+只有 ISR 中的 Partition 才能被选举成 Leader, 不使用多数派机制，只要有一个 Follower 存在就可以被选举为 Leader。当所有的 Follower 都失败时，默认会选举第一个恢复的 Partition作为新的 Leader partition。在选举时不会参考各Partition中 LEO 和 HW 的位置。
