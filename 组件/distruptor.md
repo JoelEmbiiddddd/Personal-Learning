@@ -215,11 +215,30 @@ soul中，Disruptor在客户机接入时用来同步数据的，用以进行网�
 
 
 
-### 在我们的项目中，我们所使用的是菱形方式执行场景
+[Disruptor实践 | BryantChang的博客](https://bryantchang.github.io/2019/01/15/disruptor/)
 
-![在这里插入图片描述](./image/25380878c2e445c1b66dc391a76c4517.png)
+[(44条消息) disruptor笔记之五：事件消费实战_如何模拟事件并行消费_程序员欣宸的博客-CSDN博客](https://blog.csdn.net/boling_cavalry/article/details/117405835)
 
-![在这里插入图片描述](./image/0995a05915d74c798d093dcf699241f5.png)
+实战步骤
+
+1. 定义一个事件（可以是泛型）
+2. 定义一个事件工厂 继承 `EventFactory`
+3. 定义事件处理函数 继承`EventHandler<事件>`，改写`onEvent`（消费者）
+4. 定义事件方法，定义`onData`
+5. 在主函数中设置
+   - 创建`Ringbuffer`，将 RingBuffer 的创建方式改为支持多个生产者的模式。您可以使用 `RingBuffer.createMultiProducer()` 方法来创建支持多生产者的 RingBuffer。`BufferSize`设置为1024 * 1024， 阻塞策略为 `TieldingWaitStrategy`
+   - 通过`ringBuffer` 创建一个屏障 `SequenceBarrier`
+   - 继承`WorkHandler`设置5个线程。
+   - 构建多消费者工作池
+   - 设置多个消费者的sequence序号 用于单独统计消费进度, 并且设置到ringbuffer中
+   - 启动workerPool，工作线程为5
+6. 每当有消息来时，放入到disruptor中，然后mysql再取出来
 
 
 
+
+
+1. Disruptor 的消费者数量：根据硬件的物理核心数，建议将 Disruptor 的消费者数量设置为4或略大于4。这样可以充分利用物理核心的性能，避免过多的线程上下文切换。
+2. 线程池数量：对于线程池的数量，建议根据系统的具体情况和并发需求进行调整。如果您的系统并发量较大且每个任务的处理时间较长，可以适度增加线程池的数量以充分利用处理能力。通常，将线程池的大小设置为与消费者数量相等或略大于消费者数量是一个合理的起点。
+
+综合考虑以上建议，您可以将 Disruptor 的消费者数量设置为4，并创建一个线程池，线程池的大小可以设置为4或略大于4，以匹配消费者的数量。

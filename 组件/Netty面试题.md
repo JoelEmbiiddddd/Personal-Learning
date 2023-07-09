@@ -213,36 +213,12 @@ while (buffer.isReadable()) {
 
 - **消息定长**：将消息固定长度发送，例如每个消息都是固定的`100`字节。在接收端，根据固定长度对消息进行拆分。
 
-```
-// 编码器，将消息的长度固定为100字节
-pipeline.addLast("frameEncoder", new LengthFieldPrepender(2));
-pipeline.addLast("messageEncoder", new StringEncoder(CharsetUtil.UTF_8));
-// 解码器，根据固定长度对消息进行拆分
-pipeline.addLast("frameDecoder", new LengthFieldBasedFrameDecoder(100, 0, 2, 0, 2));
-pipeline.addLast("messageDecoder", new StringDecoder(CharsetUtil.UTF_8));
-```
-
 - **消息分隔符**：将消息以特定的分隔符分隔开，例如以"`\r\n`"作为分隔符。在接收端，根据分隔符对消息进行拆分。
 
-```
-// 编码器，以"\r\n"作为消息分隔符
-pipeline.addLast("frameEncoder", new DelimiterBasedFrameEncoder("\r\n"));
-pipeline.addLast("messageEncoder", new StringEncoder(CharsetUtil.UTF_8));
-// 解码器，根据"\r\n"对消息进行拆分
-pipeline.addLast("frameDecoder", new DelimiterBasedFrameDecoder(1024, Delimiters.lineDelimiter()));
-pipeline.addLast("messageDecoder", new StringDecoder(CharsetUtil.UTF_8));
-```
-
 - **消息头部加长度字段**：在消息的头部加上表示消息长度的字段，在发送端发送消息时先发送消息长度，再发送消息内容。在接收端，先读取消息头部的长度字段，再根据长度读取消息内容。
+- **通过自定义协议进行粘包和拆包的处理**
 
-```
-// 编码器，将消息的长度加入消息头部
-pipeline.addLast("frameEncoder", new LengthFieldPrepender(2));
-pipeline.addLast("messageEncoder", new StringEncoder(CharsetUtil.UTF_8));
-// 解码器，先读取消息头部的长度字段，再根据长度读取消息内容
-pipeline.addLast("frameDecoder", new LengthFieldBasedFrameDecoder(1024, 0, 2, 0, 2));
-pipeline.addLast("messageDecoder", new StringDecoder(CharsetUtil.UTF_8));
-```
+
 
 ## 19. Netty如何处理大文件的传输？
 
@@ -374,28 +350,7 @@ public class MyClientHandler extends SimpleChannelInboundHandler<Object> {
 
 在 `Netty` 中实现 `SSL/TLS `加密传输，需要通过` SSLHandler`来进行处理。通常情况下，`SSLHandler` 需要在` ChannelPipeline` 中作为最后一个`handler`添加。
 
-以下是实现` SSL/TLS` 加密传输的示例代码：
 
-```
-// 创建 SSLContext 对象，用于构建 SSLEngine
-SSLContext sslContext = SSLContext.getInstance("TLS");
-
-// 初始化 SSLContext
-KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
-KeyStore keyStore = KeyStore.getInstance("JKS");
-keyStore.load(new FileInputStream("server.jks"), "password".toCharArray());
-keyManagerFactory.init(keyStore, "password".toCharArray());
-TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-trustManagerFactory.init(keyStore);
-sslContext.init(keyManagerFactory.getKeyManagers(), trustManagerFactory.getTrustManagers(), null);
-
-// 获取 SSLEngine
-SSLEngine sslEngine = sslContext.createSSLEngine();
-sslEngine.setUseClientMode(false);
-
-// 添加 SslHandler 到 ChannelPipeline 中
-pipeline.addLast("ssl", new SslHandler(sslEngine));
-```
 
 ## 22. NioEventLoopGroup 默认的构造函数会起多少线程？
 

@@ -605,10 +605,6 @@ Unpooled.wrappedBuffer 方法可以将不同的数据源的一个或者多个数
 
 
 
-
-
-
-
 ### Kryo
 
 - 不是线程安全的，要通过ThreadLocal或者创建Kryo线程池来保证线程安全。对象池 + Kryo 解决线程不安全，也可以使用ThreadLocal + Kryo 解决线程不安全

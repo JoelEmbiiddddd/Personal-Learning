@@ -110,7 +110,68 @@ SpringBoot是以 **约定大于配置**的核心思想展开工作。它和sprin
 
 ## Spring事件监听机制
 
-`Spring` 的事件驱动模型基于 `ApplicationEvent` 和 `ApplicationListener` ，通过事件驱动的方式来实现业务模块之间的交互，交互的方式也有同步和异步两种。
+`Spring` 的事件驱动模型基于 `ApplicationEvent` 和 `ApplicationListener` ，通过事件驱动的方式来实现业务模块之间的交互，交互的方式也有同步和异步两种。它是一种观察者模式的监听方式。
+
+`观察者模式`：观察者和主题两个不同的角色，多个观察者同时观察一个主题，两者只通过抽象接口保持松耦合状态，这样双方可以相对独立的进行扩展和变化
+
+
+
+### 事件
+
+Spring为容器内事件定义了一个抽象类**ApplicationEvent**，该类继承了JDK中的事件基类**EventObject**。只需要继承 **ApplicationEvent**就可以发布自己的事件了。
+
+
+
+### 事件监听器
+
+Spring定义了一个**ApplicationListener**接口作为事件监听器的抽象，该接口继承了JDK中表示事件监听器的标记接口EventListener，内部只定义了一个抽象方法onApplicationEvent(evnt)，当监听的事件在容器中被发布，该方法将被调用。
+
+
+
+基于Spring框架来实现对自定义事件的监听流程十分简单，只需要三步：
+
+- ① 自定义事件类
+- ② 自定义事件监听器并向容器注册（通过@Component注解）
+- ③ 发布事件。通过实现ApplicationContextAware接口获取ApplicationContext实例，然后调用其发布事件方法
+
+
+
+监听容器中发布的事件
+
+步骤：
+
+1. 写一个监听器监听某个事件（ApplicationEvent及其子类）
+
+2. 把监听器加入到容器；
+
+3. 只要容器中有相关事件的发布，我们就能监听到这个事件
+
+   - ContextRefreshedEvent:容器刷新完成（所有bean都完全创建）会发布这个事件；
+   - ContextClosedEvent：关闭容器会发布这个事件
+
+
+
+### 事件发布器
+
+ApplicationContext接口继承了ApplicationEventPublisher接口，从而提供了对外发布事件的能力
+
+
+
+### ApplicationContext的作用是什么
+
+ApplicationContext相当于Spring的一个与IOC容器连接的桥梁，通过getBean();方法，我们可以轻松的从IOC容器中获取Bean对象。
+
+
+
+### ApplicationContextAware
+
+在某些类中我们经常需要通过ApplicationContext来获取需要的bean,但每一次使用new ClassPathXmlApplicationContext()都会重新装配文件并实例化上下文bean，这样肯定是很麻烦的。
+
+此时ApplicationContextAware接口的作用就体现出来了——spring会给实现此接口的类注入ApplicationContext对象。实现了这个接口的bean，当spring容器初始化的时候，会自动的将ApplicationContext注入进来。
+
+
+
+Spring容器会检测容器中的所有Bean，如果发现某个Bean实现了ApplicationContextAware接口，Spring容器会在创建该Bean之后，自动调用该Bean的setApplicationContextAware()方法，调用该方法时。
 
 
 
