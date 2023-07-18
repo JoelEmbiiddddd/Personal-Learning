@@ -74,7 +74,11 @@ Redis滑块锁（Slide Lock）是一种基于Redis的分布式锁实现方式。
 
 该服务是把cache作为主要的数据存储。
 
-写模式是什么，读模式是什么
+写模式：
+
+- 先查cache，cache中不存在，直接更新db
+
+- cache中存在，则先更新
 
 
 
@@ -944,12 +948,6 @@ redission则解决了上述的问题。它是**java的redis客户端之一**，�
 
 
 ## Redission
-
-
-
-
-
-
 
 
 
