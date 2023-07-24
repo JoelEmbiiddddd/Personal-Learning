@@ -154,8 +154,10 @@
 kafka对于这个问题有3个参数
 
 1. **acks**：默认值为1，表示如果leader副本接收后就算成功发送。 如果配置acks=all表示所有ISR列表的副本全部收到消息后，生产者才会接收到来自服务器的响应.。
+
 2. **设置 replication.factor >= 3**：保证每个 分区(partition) 至少有 3 个副本
-3. 
+
+   
 
 
 
@@ -185,9 +187,7 @@ kafka对于这个问题有3个参数
 
 当领导者副本挂掉了，或者说领导者副本所在的Broker宕机时，Kafka依托于ZooKeeper提供的监控功能能够实时感知到，并立即开启新一轮的领导者选举，从追随者副本中选一个作为新的领导者。老Leader副本重启回来后，只能作为追随者副本加入到集群中。
 
-这样子的好处:
-
-1. **方便实现单调读**
+这样子的好处**方便实现单调读**
 
 
 
@@ -212,3 +212,49 @@ Leader维护ISR列表，Follower从leader同步数据有一定些延迟，超过
 ### Leader选举策略
 
 只有 ISR 中的 Partition 才能被选举成 Leader, 不使用多数派机制，只要有一个 Follower 存在就可以被选举为 Leader。当所有的 Follower 都失败时，默认会选举第一个恢复的 Partition作为新的 Leader partition。在选举时不会参考各Partition中 LEO 和 HW 的位置。
+
+
+
+## Kafka的高可用性
+
+消息备份机制、ISR、消息应答确认机制、LEO和HW
+
+
+
+### 消息备份机制
+
+Kafka的每个分区（Partition）都有一个副本集合AR，每个副本集合包含一个Leader副本，及0个以上的Follower副本。生产者将消息发送对应Partition的Leader副本，Follower副本从Leader副本同步消息，Kafka的Leader机制在保障数据一致性的同时，也降低了消息备份的复杂度。
+同一个Partition的副本不会存储在同一个Broker上，Kafka会尽量将所有的Partition以及其各个副本均匀地分配在整个集群中，这样既做好了负载均衡，又提高了容错能力。
+
+
+
+### ISR
+
+在消息同步期间，Follower副本相对于Leader副本具有一定程度的滞后，Leader副本负责维护和跟踪ISR集合中所有Follower副本的滞后状态，并将ISR的变更同步至ZooKeeper。当Follower副本落后太多或失效时，Leader副本会将它从ISR集合中剔除，被移除ISR的Follower可以继续发送FetchRequest请求，尝试再次跟上Leader并重新进入ISR。追赶上Leader副本的判定标准是，此Follower副本的LEO不小于Leader副本的HW。
+
+
+通常只有在ISR集合中的副本才有资格被选举为新的Leader。
+
+
+
+### 消息应答确认机制
+
+ack=-1/all ，就要所有ISR中的副本都写入才行
+
+
+
+### LEO和HW
+
+在消息的追加过程，提到了日志偏移量，Kafka的每个副本对象有两个重要的偏移量属性：
+
+- LEO（log end offset），即日志末端位移，指向副本日志中下一条消息的偏移量（即下一条消息的写入位置）
+- HW（High Watermark），高水位线，指已同步ISR中Follower副本的偏移量标识
+
+所有高水位线以下的消息都是备份过的，消费者仅可以消费各个分区Leader高水位线以下的消息，所以Leader的HW值是由ISR中所有备份的LEO最小值决定的
+
+
+
+
+## Kafka分区Leader副本选举
+
+同一个分区，同一个Broker节点中不允许出现多个副本，当分区的Leader节点发生功能故障时，其中一个Follower节点就会成为新的Leader节点。
